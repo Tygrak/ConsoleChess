@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "ak5vin0o44CU4l/swCEto9SdXa245437mW82f+r2JM3C0QfnDAgs8cCjjxfOMgddYJ7hsfPVG2TajxAN0IMIEQ==",
+  "success": true,
+  "projectFilePath": "/home/tygrak/Programming/C#/ConsoleChess/ConsoleChess.csproj",
+  "expectedPackageFiles": [
+    "/home/tygrak/.nuget/packages/microsoft.aspnetcore.app.ref/3.1.2/microsoft.aspnetcore.app.ref.3.1.2.nupkg.sha512"
+  ],
+  "logs": []
+}
