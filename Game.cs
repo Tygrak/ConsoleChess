@@ -10,6 +10,31 @@ namespace ConsoleChess {
             CurrentBoard = Board.InitializeFromFen(@"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         }
 
+        public void StartGame() {
+            DrawBoard();
+            while (true) {
+                Console.WriteLine();
+                Random random = new Random();
+                var moves = CurrentBoard.GetRealMoves();
+                GameResult gameResult = CurrentBoard.GetGameResultFromMoves(moves);
+                if (gameResult == GameResult.Draw) {
+                    Console.WriteLine("Draw!");
+                    break;
+                } else if (gameResult == GameResult.WhiteWin) {
+                    Console.WriteLine("Checkmate! White wins!");
+                    break;
+                } else if (gameResult == GameResult.BlackWin) {
+                    Console.WriteLine("Checkmate! Black wins!");
+                    break;
+                }
+                int selected = random.Next(moves.Count);
+                CurrentBoard.MakeMove(moves[selected].Item1, moves[selected].Item2, moves[selected].Item3);
+                DrawBoard();
+                //System.Threading.Thread.Sleep(1000);
+            }
+            Console.WriteLine(CurrentBoard.BoardToFen());
+        }
+
         public void DrawBoard() {
             Console.Write("  ");
             for (int x = 0; x < 8; x++) {

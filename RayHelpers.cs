@@ -28,20 +28,20 @@ namespace ConsoleChess {
 
         private static UInt64[] CalculateRanks() {
             UInt64[] ranks = new UInt64[8];
-            ranks[0] = 255 << 0;
-            ranks[1] = 255 << 1;
-            ranks[2] = 255 << 2;
-            ranks[3] = 255 << 3;
-            ranks[4] = 255 << 4;
-            ranks[5] = 255 << 5;
-            ranks[6] = 255 << 6;
-            ranks[7] = 255 << 7;
+            ranks[0] = 255ul << 0;
+            ranks[1] = 255ul << 8;
+            ranks[2] = 255ul << 16;
+            ranks[3] = 255ul << 24;
+            ranks[4] = 255ul << 32;
+            ranks[5] = 255ul << 40;
+            ranks[6] = 255ul << 48;
+            ranks[7] = 255ul << 56;
             return ranks;
         }
 
         private static UInt64[] CalculateFiles() {
             UInt64[] files = new UInt64[8];
-            files[0] = 1|(1 << 8)|(1 << 16)|(1 << 24)|(1 << 32)|(1 << 40)|(1 << 48)|(1 << 56);
+            files[0] = 1ul|(1ul << 8)|(1ul << 16)|(1ul << 24)|(1ul << 32)|(1ul << 40)|(1ul << 48)|(1ul << 56);
             files[1] = files[0] << 1;
             files[2] = files[0] << 2;
             files[3] = files[0] << 3;
@@ -159,7 +159,7 @@ namespace ConsoleChess {
             int currPos = pos;
             int currX = pos%8;
             List<byte> positions = new List<byte>();
-            currPos += 8;
+            currPos += 9;
             currX++;
             while (currPos < 64 && currX < 8) {
                 positions.Add((byte) currPos);
@@ -228,7 +228,7 @@ namespace ConsoleChess {
             List<byte> positions = new List<byte>();
             currPos -= 1;
             currX--;
-            while (currX >= 8) {
+            while (currX >= 0) {
                 positions.Add((byte) currPos);
                 currPos -= 1;
                 currX--;
@@ -248,6 +248,32 @@ namespace ConsoleChess {
                 currX--;
             }
             return positions.ToArray();
+        }
+
+        public static void DrawBitBoard(UInt64 bitBoard) {
+            for (int y = 7; y >= 0; y--) {
+                if (y < 7) {
+                    Console.Write('\n');
+                }
+                Console.Write((char) ('1'+y));
+                Console.Write(' ');
+                for (UInt64 x = 0; x < 8; x++) {
+                    UInt64 pos = 0b1ul << ((int) x+y*8);
+                    if ((bitBoard & pos) != 0) {
+                        Console.Write('X');
+                    } else {
+                        Console.Write('.');
+                    }
+                }
+                Console.Write(' ');
+                Console.Write((char) ('1'+y));
+            }
+            Console.WriteLine();
+            Console.Write("  ");
+            for (int x = 0; x < 8; x++) {
+                Console.Write((char) ('a'+x));
+            }
+            Console.WriteLine();
         }
     }
 }
