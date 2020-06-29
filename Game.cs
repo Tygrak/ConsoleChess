@@ -1,10 +1,17 @@
 using System;
+using System.Text.RegularExpressions;
 
 namespace ConsoleChess {
     public class Game {
         internal Board CurrentBoard;
         public ConsoleColor WhiteColor = ConsoleColor.White;
         public ConsoleColor BlackColor = ConsoleColor.Red;
+        public AlphaBeta alphaBeta = new AlphaBeta();
+        int halfTurnCount = 1;
+        bool playerWhite = false;
+        bool playerBlack = false;
+        int whiteDepth = 5;
+        int blackDepth = 3;
 
         public void InitializeBoard() {
             CurrentBoard = Board.InitializeFromFen(@"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -27,12 +34,47 @@ namespace ConsoleChess {
                     Console.WriteLine("Checkmate! Black wins!");
                     break;
                 }
-                int selected = random.Next(moves.Count);
-                CurrentBoard.MakeMove(moves[selected].Item1, moves[selected].Item2, moves[selected].Item3);
+                if ((CurrentBoard.WhiteTurn && !playerWhite) || (!CurrentBoard.WhiteTurn && !playerBlack)) {
+                    var sortedMoves = alphaBeta.FindMoveAlphaBeta(CurrentBoard, CurrentBoard.WhiteTurn ? whiteDepth : blackDepth);
+                    int selected = 0;
+                    if (halfTurnCount < 4) {
+                        selected = random.Next(Math.Min(moves.Count, 3));
+                    } else if (halfTurnCount < 8) {
+                        selected = random.Next(Math.Min(moves.Count, 2));
+                    }
+                    Console.WriteLine($"{sortedMoves[selected].Item4.ToString("0.000")}: "
+                                      + $"{Board.Position1DToAlgebraic(sortedMoves[selected].Item2)} -> "
+                                      + $"{Board.Position1DToAlgebraic(sortedMoves[selected].Item3)}");
+                    CurrentBoard.MakeMove(sortedMoves[selected].Item1, sortedMoves[selected].Item2, sortedMoves[selected].Item3);
+                } else {
+                    var playerMove = GetPlayerMove();
+                    var moveIndex = moves.FindIndex(m => m.Item2 == playerMove.Item1 && m.Item3 == playerMove.Item2);
+                    while (moveIndex == -1) {
+                        Console.WriteLine("Invalid move, try again:");
+                        playerMove = GetPlayerMove();
+                        moveIndex = moves.FindIndex(m => m.Item2 == playerMove.Item1 && m.Item3 == playerMove.Item2);
+                    }
+                    CurrentBoard.MakeMove(moves[moveIndex].Item1, moves[moveIndex].Item2, moves[moveIndex].Item3);
+                }
+                halfTurnCount++;
                 DrawBoard();
                 //System.Threading.Thread.Sleep(1000);
             }
-            Console.WriteLine(CurrentBoard.BoardToFen());
+            Console.WriteLine(CurrentBoard.BoardToFen((halfTurnCount+1)/2));
+        }
+
+        public (byte, byte) GetPlayerMove() {
+            Console.Write("Move:");
+            string input = "";
+            Match match = Regex.Match(input, @"x");
+            while (!match.Success) {
+                if (input == "fen") {
+                    Console.WriteLine(CurrentBoard.BoardToFen((halfTurnCount+1)/2));
+                }
+                input = Console.ReadLine().ToLowerInvariant();
+                match = Regex.Match(input, @"([a-h][1-8])[ -]+([a-h][1-8])");
+            }
+            return (Board.PositionAlgebraicTo1D(match.Groups[1].Value), Board.PositionAlgebraicTo1D(match.Groups[2].Value));
         }
 
         public void DrawBoard() {

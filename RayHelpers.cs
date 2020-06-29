@@ -12,11 +12,14 @@ namespace ConsoleChess {
         public const int West = 6;
         public const int NorthWest = 7;
 
-        public readonly static byte[][][] PositionRays;
+        //public readonly static byte[][][] OrderedPositionRays;
+        public readonly static UInt64[][] PositionRays;
         public readonly static UInt64[] Ranks;
         public readonly static UInt64[] Files;
         public readonly static UInt64[] KnightMoves;
         public readonly static UInt64[] KingMoves;
+        public readonly static UInt64[][] KingShield;
+        public readonly static UInt64[] KingSphere;
 
         static RayHelpers() {
             PositionRays = CalculateAllPositionRays();
@@ -24,6 +27,8 @@ namespace ConsoleChess {
             Files = CalculateFiles();
             KnightMoves = CalculateKnightMoves();
             KingMoves = CalculateKingMoves();
+            KingShield = CalculateKingShield();
+            KingSphere = CalculateKingSphere();
         }
 
         private static UInt64[] CalculateRanks() {
@@ -128,10 +133,46 @@ namespace ConsoleChess {
             return kingPosition;
         }
 
-        private static byte[][][] CalculateAllPositionRays() {
-            byte[][][] result = new byte[64][][];
+        private static UInt64[][] CalculateKingShield() {
+            UInt64[][] result = new UInt64[64][];
+            for (int pos = 0; pos < 64; pos++) {
+                int y = pos/8;
+                result[pos] = new UInt64[2];
+                for (int j = 0; j < 2; j++) {
+                    if (j == 0 && y > 0) {
+                        result[pos][j] = ((0b1ul << (pos-7)) | (0b1ul << (pos-8)) | (0b1ul << (pos-9))) & Ranks[y-1];
+                    } else if (j == 1 && y < 7) {
+                        result[pos][j] = ((0b1ul << (pos+7)) | (0b1ul << (pos+8)) | (0b1ul << (pos+9))) & Ranks[y+1];
+                    } else {
+                        result[pos][j] = 0;
+                    }
+                }
+            }
+            return result;
+        }
+
+        private static UInt64[] CalculateKingSphere() {
+            UInt64[] result = new UInt64[64];
+            for (int pos = 0; pos < 64; pos++) {
+                int kingX = pos%8;
+                int kingY = pos/8;
+                result[pos] = 0;
+                for (int x = kingX-2; x <= kingX+2; x++) {
+                    for (int y = kingY-2; y <= kingY+2; y++) {
+                        if (x < 0 || x > 7 || y < 0 || y > 7) {
+                            continue;
+                        }
+                        result[pos] |= 1ul << (x+y*8);
+                    }
+                }
+            }
+            return result;
+        }
+
+        private static UInt64[][] CalculateAllPositionRays() {
+            UInt64[][] result = new UInt64[64][];
             for (int i = 0; i < 64; i++) {
-                result[i] = new byte[8][];
+                result[i] = new UInt64[8];
                 result[i][North] = CalculateNorthRay((byte) i);
                 result[i][NorthEast] = CalculateNorthEastRay((byte) i);
                 result[i][East] = CalculateEastRay((byte) i);
@@ -144,110 +185,110 @@ namespace ConsoleChess {
             return result;
         }
 
-        private static byte[] CalculateNorthRay(byte pos) {
+        private static UInt64 CalculateNorthRay(byte pos) {
             int currPos = pos;
-            List<byte> positions = new List<byte>();
+            UInt64 result = 0;
             currPos += 8;
             while (currPos < 64) {
-                positions.Add((byte) currPos);
+                result |= 1ul << currPos;
                 currPos += 8;
             }
-            return positions.ToArray();
+            return result;
         }
 
-        private static byte[] CalculateNorthEastRay(byte pos) {
+        private static UInt64 CalculateNorthEastRay(byte pos) {
             int currPos = pos;
             int currX = pos%8;
-            List<byte> positions = new List<byte>();
+            UInt64 result = 0;
             currPos += 9;
             currX++;
             while (currPos < 64 && currX < 8) {
-                positions.Add((byte) currPos);
+                result |= 1ul << currPos;
                 currPos += 9;
                 currX++;
             }
-            return positions.ToArray();
+            return result;
         }
 
-        private static byte[] CalculateEastRay(byte pos) {
+        private static UInt64 CalculateEastRay(byte pos) {
             int currPos = pos;
             int currX = pos%8;
-            List<byte> positions = new List<byte>();
+            UInt64 result = 0;
             currPos += 1;
             currX++;
             while (currX < 8) {
-                positions.Add((byte) currPos);
+                result |= 1ul << currPos;
                 currPos += 1;
                 currX++;
             }
-            return positions.ToArray();
+            return result;
         }
 
-        private static byte[] CalculateSouthEastRay(byte pos) {
+        private static UInt64 CalculateSouthEastRay(byte pos) {
             int currPos = pos;
             int currX = pos%8;
-            List<byte> positions = new List<byte>();
+            UInt64 result = 0;
             currPos -= 7;
             currX++;
             while (currPos >= 0 && currX < 8) {
-                positions.Add((byte) currPos);
+                result |= 1ul << currPos;
                 currPos -= 7;
                 currX++;
             }
-            return positions.ToArray();
+            return result;
         }
 
-        private static byte[] CalculateSouthRay(byte pos) {
+        private static UInt64 CalculateSouthRay(byte pos) {
             int currPos = pos;
-            List<byte> positions = new List<byte>();
+            UInt64 result = 0;
             currPos -= 8;
             while (currPos >= 0) {
-                positions.Add((byte) currPos);
+                result |= 1ul << currPos;
                 currPos -= 8;
             }
-            return positions.ToArray();
+            return result;
         }
 
-        private static byte[] CalculateSouthWestRay(byte pos) {
+        private static UInt64 CalculateSouthWestRay(byte pos) {
             int currPos = pos;
             int currX = pos%8;
-            List<byte> positions = new List<byte>();
+            UInt64 result = 0;
             currPos -= 9;
             currX--;
             while (currPos >= 0 && currX >= 0) {
-                positions.Add((byte) currPos);
+                result |= 1ul << currPos;
                 currPos -= 9;
                 currX--;
             }
-            return positions.ToArray();
+            return result;
         }
 
-        private static byte[] CalculateWestRay(byte pos) {
+        private static UInt64 CalculateWestRay(byte pos) {
             int currPos = pos;
             int currX = pos%8;
-            List<byte> positions = new List<byte>();
+            UInt64 result = 0;
             currPos -= 1;
             currX--;
             while (currX >= 0) {
-                positions.Add((byte) currPos);
+                result |= 1ul << currPos;
                 currPos -= 1;
                 currX--;
             }
-            return positions.ToArray();
+            return result;
         }
 
-        private static byte[] CalculateNorthWestRay(byte pos) {
+        private static UInt64 CalculateNorthWestRay(byte pos) {
             int currPos = pos;
             int currX = pos%8;
-            List<byte> positions = new List<byte>();
+            UInt64 result = 0;
             currPos += 7;
             currX--;
             while (currPos < 64 && currX >= 0) {
-                positions.Add((byte) currPos);
+                result |= 1ul << currPos;
                 currPos += 7;
                 currX--;
             }
-            return positions.ToArray();
+            return result;
         }
 
         public static void DrawBitBoard(UInt64 bitBoard) {
