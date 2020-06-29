@@ -10,8 +10,8 @@ namespace ConsoleChess {
         int halfTurnCount = 1;
         bool playerWhite = false;
         bool playerBlack = false;
-        int whiteDepth = 5;
-        int blackDepth = 3;
+        int whiteDepth = 4;
+        int blackDepth = 4;
 
         public void InitializeBoard() {
             CurrentBoard = Board.InitializeFromFen(@"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -35,16 +35,45 @@ namespace ConsoleChess {
                     break;
                 }
                 if ((CurrentBoard.WhiteTurn && !playerWhite) || (!CurrentBoard.WhiteTurn && !playerBlack)) {
-                    var sortedMoves = alphaBeta.FindMoveAlphaBeta(CurrentBoard, CurrentBoard.WhiteTurn ? whiteDepth : blackDepth);
+                    int whitePiecesAmount = BitHelpers.GetNumberOfSetBits(CurrentBoard.WhitePieces);
+                    int blackPiecesAmount = BitHelpers.GetNumberOfSetBits(CurrentBoard.BlackPieces);
+                    int depth = CurrentBoard.WhiteTurn ? whiteDepth : blackDepth;
+                    if (moves.Count <= 4) {
+                        depth += 1;
+                    }
+                    if (whitePiecesAmount+blackPiecesAmount <= 3) {
+                        depth += 5;
+                    } else if (whitePiecesAmount+blackPiecesAmount <= 4) {
+                        depth += 4;
+                    } else if (whitePiecesAmount+blackPiecesAmount <= 5) {
+                        depth += 3;
+                    } else if (whitePiecesAmount+blackPiecesAmount <= 6) {
+                        depth += 2;
+                    } else if (whitePiecesAmount+blackPiecesAmount <= 8) {
+                        depth += 1;
+                    }
+                    if (halfTurnCount <= 2) {
+                        depth = Math.Max(3, depth-2);
+                    }
+                    if (depth%2 == 0) {
+                        depth -= 1;
+                    }
+                    var sortedMoves = alphaBeta.FindMoveAlphaBeta(CurrentBoard, depth);
                     int selected = 0;
-                    if (halfTurnCount < 4) {
-                        selected = random.Next(Math.Min(moves.Count, 3));
-                    } else if (halfTurnCount < 8) {
-                        selected = random.Next(Math.Min(moves.Count, 2));
+                    if (sortedMoves.Count > 1 && MathF.Abs(sortedMoves[0].Item4-sortedMoves[1].Item4) < 0.5f) {
+                        if (halfTurnCount <= 1) {
+                            sortedMoves.Insert(0, (PieceType.WhitePawn, Board.PositionAlgebraicTo1D("e2"), Board.PositionAlgebraicTo1D("e4"), 0));
+                            sortedMoves.Insert(0, (PieceType.WhitePawn, Board.PositionAlgebraicTo1D("d2"), Board.PositionAlgebraicTo1D("d4"), 0));
+                            selected = random.Next(Math.Min(sortedMoves.Count, 5));
+                        } else if (halfTurnCount <= 4) {
+                            selected = random.Next(Math.Min(sortedMoves.Count, 3));
+                        } else if (halfTurnCount <= 8) {
+                            selected = random.Next(Math.Min(sortedMoves.Count, 2));
+                        }
                     }
                     Console.WriteLine($"{sortedMoves[selected].Item4.ToString("0.000")}: "
                                       + $"{Board.Position1DToAlgebraic(sortedMoves[selected].Item2)} -> "
-                                      + $"{Board.Position1DToAlgebraic(sortedMoves[selected].Item3)}");
+                                      + $"{Board.Position1DToAlgebraic(sortedMoves[selected].Item3)} ({depth})");
                     CurrentBoard.MakeMove(sortedMoves[selected].Item1, sortedMoves[selected].Item2, sortedMoves[selected].Item3);
                 } else {
                     var playerMove = GetPlayerMove();

@@ -80,7 +80,7 @@ namespace ConsoleChess {
                     if (to-from == 16) {
                         EnPassant = (byte) (from+8);
                     } else if (to == EnPassant) {
-                        ClearPieceFromSquare(PieceType.BlackPawn, (byte) (to+8));
+                        ClearPieceFromSquare(PieceType.BlackPawn, (byte) (to-8));
                     }
                     if (yPos == 7) {
                         BitBoard[type] &= (~toPos);
@@ -92,7 +92,7 @@ namespace ConsoleChess {
                     if (from-to == 16) {
                         EnPassant = (byte) (from-8);
                     } else if (to == EnPassant) {
-                        ClearPieceFromSquare(PieceType.BlackPawn, (byte) (to-8));
+                        ClearPieceFromSquare(PieceType.WhitePawn, (byte) (to+8));
                     }
                     if (yPos == 0) {
                         BitBoard[type] &= (~toPos);
