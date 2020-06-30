@@ -11,6 +11,8 @@ namespace ConsoleChess {
         internal int HalfMovesSincePawnOrCapture = 0;
         internal bool WhiteTurn = true;
         internal List<(byte type, byte pos)> PiecePositions = new List<(byte type, byte pos)>(); 
+        internal byte BlackKingPos;
+        internal byte WhiteKingPos;
 
         internal UInt64 WhitePieces {
             get {
@@ -41,6 +43,8 @@ namespace ConsoleChess {
             EnPassant = board.EnPassant;
             HalfMovesSincePawnOrCapture = board.HalfMovesSincePawnOrCapture;
             WhiteTurn = board.WhiteTurn;
+            WhiteKingPos = board.WhiteKingPos;
+            BlackKingPos = board.BlackKingPos;
             PiecePositions = new List<(byte type, byte pos)>(board.PiecePositions);
         }
 
@@ -52,10 +56,13 @@ namespace ConsoleChess {
             EnPassant = state.EnPassant;
             HalfMovesSincePawnOrCapture = state.HalfMovesSincePawnOrCapture;
             WhiteTurn = state.WhiteTurn;
-            PiecePositions = new List<(byte type, byte pos)>(state.PiecePositions.Count);
-            for (int i = 0; i < state.PiecePositions.Count; i++) {
+            //PiecePositions = new List<(byte type, byte pos)>(state.PiecePositions.Count);
+            PiecePositions = new List<(byte type, byte pos)>(state.PiecePositions);
+            WhiteKingPos = state.WhiteKingPos;
+            BlackKingPos = state.BlackKingPos;
+            /*for (int i = 0; i < state.PiecePositions.Count; i++) {
                 PiecePositions.Add((state.PiecePositions[i].type, state.PiecePositions[i].pos));
-            }
+            }*/
         }
 
         public void MakeMove(byte type, byte from, byte to) {
@@ -107,8 +114,10 @@ namespace ConsoleChess {
             if (PieceType.IsKing(type)) {
                 if (PieceType.IsWhite(type)) {
                     CastlingRights &= 0b0011;
+                    WhiteKingPos = to;
                 } else if (!PieceType.IsWhite(type)) {
                     CastlingRights &= 0b1100;
+                    BlackKingPos = to;
                 }
                 if (to-from == 2) {
                     MakeMove(PieceType.RookOfColor(PieceType.IsWhite(type)), (byte) (to+1), (byte) (to-1));
@@ -134,8 +143,9 @@ namespace ConsoleChess {
 
         public bool TryMakeMove(byte type, byte from, byte to) {
             MakeMove(type, from, to);
-            var king = PiecePositions.Find(p => p.type == PieceType.KingOfColor(!WhiteTurn));
-            if (SquareAttackers(!WhiteTurn, king.pos) != 0) {
+            if (!WhiteTurn && SquareAttackers(!WhiteTurn, WhiteKingPos) != 0) {
+                return false;
+            } else if (WhiteTurn && SquareAttackers(!WhiteTurn, BlackKingPos) != 0) {
                 return false;
             }
             return true;
@@ -382,6 +392,14 @@ namespace ConsoleChess {
             return attacks;
         }
 
+        internal byte GetKingOfColorPosition(bool white) {
+            if (white) {
+                return WhiteKingPos;
+            } else {
+                return BlackKingPos;
+            }
+        }
+
         public static byte Position2DTo1D(int x, int y) {
             return (byte) (x+y*8);
         }
@@ -548,9 +566,11 @@ namespace ConsoleChess {
                     } else if (row[i] == 'k') {
                         board.BitBoard[PieceType.BlackKing] |= pos;
                         piecePositions.Add((PieceType.BlackKing, boardPos));
+                        board.BlackKingPos = boardPos;
                     } else if (row[i] == 'K') {
                         board.BitBoard[PieceType.WhiteKing] |= pos;
                         piecePositions.Add((PieceType.WhiteKing, boardPos));
+                        board.WhiteKingPos = boardPos;
                     }
                     x++;
                 }

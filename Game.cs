@@ -10,8 +10,8 @@ namespace ConsoleChess {
         int halfTurnCount = 1;
         bool playerWhite = false;
         bool playerBlack = false;
-        int whiteDepth = 4;
-        int blackDepth = 4;
+        int whiteDepth = 5;
+        int blackDepth = 3;
 
         public void InitializeBoard() {
             CurrentBoard = Board.InitializeFromFen(@"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");

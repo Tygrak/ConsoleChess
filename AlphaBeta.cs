@@ -112,8 +112,7 @@ namespace ConsoleChess {
                 }
             }
             if (!foundLegalMove) {
-                var king = board.PiecePositions.Find(p => p.type == PieceType.KingOfColor(board.WhiteTurn));
-                if (board.SquareAttackers(board.WhiteTurn, king.pos) != 0) {
+                if (board.SquareAttackers(board.WhiteTurn, board.GetKingOfColorPosition(board.WhiteTurn)) != 0) {
                     return (board.WhiteTurn ? -1000000 : 1000000)*(depth+1);
                 } else {
                     return 0;
