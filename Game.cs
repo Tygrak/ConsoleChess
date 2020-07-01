@@ -19,7 +19,7 @@ namespace ConsoleChess {
 
         public void StartGame() {
             DrawBoard();
-            Random random = new Random(0);
+            Random random = new Random(690);
             while (true) {
                 Console.WriteLine();
                 var moves = CurrentBoard.GetRealMoves();
@@ -38,7 +38,8 @@ namespace ConsoleChess {
                     int whitePiecesAmount = BitHelpers.GetNumberOfSetBits(CurrentBoard.WhitePieces);
                     int blackPiecesAmount = BitHelpers.GetNumberOfSetBits(CurrentBoard.BlackPieces);
                     int depth = CurrentBoard.WhiteTurn ? whiteDepth : blackDepth;
-                    if (moves.Count <= 4) {
+                    //todo: implement iterative deepening search
+                    /*if (moves.Count <= 4) {
                         depth += 1;
                     }
                     if (whitePiecesAmount+blackPiecesAmount <= 3) {
@@ -51,7 +52,7 @@ namespace ConsoleChess {
                         depth += 2;
                     } else if (whitePiecesAmount+blackPiecesAmount <= 8) {
                         depth += 1;
-                    }
+                    }*/
                     if (halfTurnCount <= 2) {
                         depth = Math.Max(3, depth-2);
                     }
@@ -87,7 +88,8 @@ namespace ConsoleChess {
                 }
                 halfTurnCount++;
                 DrawBoard();
-                //System.Threading.Thread.Sleep(1000);
+                Console.WriteLine(CurrentBoard.Zobrist);
+                //System.Threading.Thread.Sleep(1000); 
             }
             Console.WriteLine(CurrentBoard.BoardToFen((halfTurnCount+1)/2));
         }

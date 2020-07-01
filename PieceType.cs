@@ -1,6 +1,6 @@
 namespace ConsoleChess {
     public static class PieceType {
-        public const int Empty = 255;
+        public const int Empty = 15;
         public const int WhitePawn = 0;
         public const int BlackPawn = 1;
         public const int WhiteBishop = 2;
@@ -64,6 +64,34 @@ namespace ConsoleChess {
 
         public static int KingOfColor(bool white) {
             return white ? WhiteKing : BlackKing;
+        }
+
+        public static int GetPieceZobristStartingIndex(int pieceType) {
+            if (pieceType == WhitePawn) {
+                return BitHelpers.ZobristWhitePawnStartingIndex;
+            } else if (pieceType == WhiteKnight) {
+                return BitHelpers.ZobristWhiteKnightStartingIndex;
+            } else if (pieceType == WhiteBishop) {
+                return BitHelpers.ZobristWhiteBishopStartingIndex;
+            } else if (pieceType == WhiteRook) {
+                return BitHelpers.ZobristWhiteRookStartingIndex;
+            } else if (pieceType == WhiteQueen) {
+                return BitHelpers.ZobristWhiteQueenStartingIndex;
+            } else if (pieceType == WhiteKing) {
+                return BitHelpers.ZobristWhiteKingStartingIndex;
+            } else if (pieceType == BlackPawn) {
+                return BitHelpers.ZobristBlackPawnStartingIndex;
+            } else if (pieceType == BlackKnight) {
+                return BitHelpers.ZobristBlackKnightStartingIndex;
+            } else if (pieceType == BlackBishop) {
+                return BitHelpers.ZobristBlackBishopStartingIndex;
+            } else if (pieceType == BlackRook) {
+                return BitHelpers.ZobristBlackRookStartingIndex;
+            } else if (pieceType == BlackQueen) {
+                return BitHelpers.ZobristBlackQueenStartingIndex;
+            } else {
+                return BitHelpers.ZobristBlackKingStartingIndex;
+            }
         }
     }
 }

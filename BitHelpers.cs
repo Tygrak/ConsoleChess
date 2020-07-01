@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 
 namespace ConsoleChess {
     public static class BitHelpers {
         //mostly from https://github.com/bytefire/Shutranj/blob/master/Shutranj.Engine/BitHelper.cs
+        private static RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
 
         private static int[] Index64 = new int[64] 
         {
@@ -82,15 +84,40 @@ namespace ConsoleChess {
             return Index64[((val ^ (val - 1)) * debruijn64) >> 58];
         }
 
-        /*public static int[] GetSetBitIndexes2(UInt64 bitboard) {
+        public static UInt64 GetPseudoRandomNumber() {
+            byte[] random64Bits = new byte[8];
+            rng.GetBytes(random64Bits);
+            return BitConverter.ToUInt64(random64Bits, 0);
+        }
+
+        public static int[] GetSetBitIndexes2(UInt64 bitboard) {
             // from: https://chessprogramming.wikispaces.com/Bitboard+Serialization#Converting%20Sets%20to%20Lists-Square%20Index%20Serialization-Scanning%20Forward
             List<int> indexes = new List<int>(64);
-            while (bitboard != 0)
-            {
+            while (bitboard != 0) {
                 indexes.Add(GetLeastSignificant1BitIndex2(bitboard));
                 bitboard &= bitboard - 1;
             }
             return indexes.ToArray();
-        }*/
+        }
+
+        internal const int ZobristWhitePawnStartingIndex = 0;
+        internal const int ZobristBlackPawnStartingIndex = 64;
+        internal const int ZobristWhiteBishopStartingIndex = 128;
+        internal const int ZobristBlackBishopStartingIndex = 192;
+        internal const int ZobristWhiteKnightStartingIndex = 256;
+        internal const int ZobristBlackKnightStartingIndex = 320;
+        internal const int ZobristWhiteRookStartingIndex = 384;
+        internal const int ZobristBlackRookStartingIndex = 448;
+        internal const int ZobristWhiteQueenStartingIndex = 512;
+        internal const int ZobristBlackQueenStartingIndex = 576;
+        internal const int ZobristWhiteKingStartingIndex = 640;
+        internal const int ZobristBlackKingStartingIndex = 704;
+
+        internal const int ZobristWhiteMoveIndex = 768;
+        internal const int ZobristWhiteKingSideCastlingIndex = 769;
+        internal const int ZobristWhiteQueenSideCastlingIndex = 770;
+        internal const int ZobristBlackKingSideCastlingIndex = 771;
+        internal const int ZobristBlackQueenSideCastlingIndex = 772;
+        internal const int ZobristEnPassantStartingIndex = 773;
     }
 }

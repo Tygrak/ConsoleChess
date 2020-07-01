@@ -5,6 +5,12 @@ namespace ConsoleChess {
         //viezha
         //lots of stuff modified from https://www.chessprogramming.org/ and https://github.com/bytefire/Shutranj/blob/master/Shutranj.Engine
         static void Main(string[] args) {
+            TtEntry entry = new TtEntry(9, TtEntry.CreateData(0, 15, 0, 0, 69, 1));
+            /*RayHelpers.DrawBitBoard(entry.Data);
+            entry = new TtEntry(9, TtEntry.CreateData(1, 15, 0, 63, 0, 63));
+            RayHelpers.DrawBitBoard(entry.Data);
+            entry = new TtEntry(9, TtEntry.CreateData(2, 0, 0, 0, BitConverter.Int32BitsToSingle(-1), 0));
+            RayHelpers.DrawBitBoard(entry.Data);*/
             Game testGame = new Game();
             /*testGame.InitializeBoard();
             testGame.CurrentBoard.MakeMove(PieceType.WhitePawn, Board.Position1DFrom2D(4, 1), Board.Position1DFrom2D(4, 3));

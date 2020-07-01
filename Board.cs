@@ -6,6 +6,7 @@ using System.Diagnostics;
 namespace ConsoleChess {
     public class Board {
         public UInt64[] BitBoard = new UInt64[12];
+        //castling rights stored as:   0bKQkq (KQ is white, kq is black)
         public UInt16 CastlingRights = 0b1111;
         public int EnPassant = 255;
         public int HalfMovesSincePawnOrCapture = 0;
@@ -15,7 +16,9 @@ namespace ConsoleChess {
         internal int WhiteKingPos;
         
         public UInt64 Zobrist = 0;
+        private UInt64[] zobristKeys = new UInt64[ZobristSize];
 
+        internal const int ZobristSize = 781;
         internal const int MaxMoves = 220;
 
         internal UInt64 WhitePieces {
@@ -50,6 +53,7 @@ namespace ConsoleChess {
             WhiteKingPos = board.WhiteKingPos;
             BlackKingPos = board.BlackKingPos;
             Zobrist = board.Zobrist;
+            zobristKeys = board.zobristKeys;
             PiecePositions = ((int type, int pos)[]) board.PiecePositions.Clone();
         }
 
@@ -61,17 +65,13 @@ namespace ConsoleChess {
             EnPassant = state.EnPassant;
             HalfMovesSincePawnOrCapture = state.HalfMovesSincePawnOrCapture;
             WhiteTurn = state.WhiteTurn;
-            //PiecePositions = new List<(int type, int pos)>(state.PiecePositions.Count);
-            //PiecePositions = new List<(int type, int pos)>(state.PiecePositions);
             for (int i = 0; i < state.PiecePositions.Length; i++) {
                 PiecePositions[i] = state.PiecePositions[i];
             }
             WhiteKingPos = state.WhiteKingPos;
             BlackKingPos = state.BlackKingPos;
             Zobrist = state.Zobrist;
-            /*for (int i = 0; i < state.PiecePositions.Count; i++) {
-                PiecePositions.Add((state.PiecePositions[i].type, state.PiecePositions[i].pos));
-            }*/
+            zobristKeys = state.zobristKeys;
         }
 
         public void MakeMove(int type, int from, int to) {
@@ -79,6 +79,8 @@ namespace ConsoleChess {
             UInt64 fromPos = 1ul << from;
             UInt64 toPos = 1ul << to;
             BitBoard[type] = (fromPos | toPos) ^ BitBoard[type];
+            Zobrist ^= zobristKeys[PieceType.GetPieceZobristStartingIndex(type)+from];
+            Zobrist ^= zobristKeys[PieceType.GetPieceZobristStartingIndex(type)+to];
             for (int i = PiecePositions.Length-1; i >= 0; i--) {
                 if (PiecePositions[i].type == PieceType.Empty) {
                     continue;
@@ -88,6 +90,7 @@ namespace ConsoleChess {
                 }
                 if (PiecePositions[i].pos == to && PieceType.IsWhite(PiecePositions[i].type) != PieceType.IsWhite(type)) {
                     BitBoard[PiecePositions[i].type] = BitBoard[PiecePositions[i].type] & (~toPos);
+                    Zobrist ^= zobristKeys[PieceType.GetPieceZobristStartingIndex(PiecePositions[i].type)+to];
                     PiecePositions[i].type = PieceType.Empty;
                     HalfMovesSincePawnOrCapture = 0;
                 }
@@ -95,6 +98,9 @@ namespace ConsoleChess {
             if (PieceType.IsPawn(type)) {
                 int yPos = to/8;
                 HalfMovesSincePawnOrCapture = 0;
+                if (EnPassant < 64) {
+                    Zobrist ^= zobristKeys[BitHelpers.ZobristEnPassantStartingIndex + (EnPassant % 8)];
+                }
                 if (PieceType.IsWhite(type)) {
                     if (to-from == 16) {
                         EnPassant = (int) (from+8);
@@ -105,7 +111,9 @@ namespace ConsoleChess {
                         BitBoard[type] &= (~toPos);
                         BitBoard[PieceType.WhiteQueen] |= toPos;
                         int index = Array.FindIndex(PiecePositions, p => p.pos == to && p.type == type);
-                        PiecePositions[index] = (PieceType.WhiteQueen, to);
+                        PiecePositions[index].type = PieceType.WhiteQueen;
+                        Zobrist ^= zobristKeys[BitHelpers.ZobristWhitePawnStartingIndex+to];
+                        Zobrist ^= zobristKeys[BitHelpers.ZobristWhiteQueenStartingIndex+to];
                     }
                 } else if (!PieceType.IsWhite(type)) {
                     if (from-to == 16) {
@@ -117,40 +125,77 @@ namespace ConsoleChess {
                         BitBoard[type] &= (~toPos);
                         BitBoard[PieceType.BlackQueen] |= toPos;
                         int index = Array.FindIndex(PiecePositions, p => p.pos == to && p.type == type);
-                        PiecePositions[index] = (PieceType.BlackQueen, to);
+                        PiecePositions[index].type = PieceType.BlackQueen;
+                        Zobrist ^= zobristKeys[BitHelpers.ZobristBlackPawnStartingIndex+to];
+                        Zobrist ^= zobristKeys[BitHelpers.ZobristBlackQueenStartingIndex+to];
                     }
                 }
+                if (EnPassant < 64) {
+                    Zobrist ^= zobristKeys[BitHelpers.ZobristEnPassantStartingIndex + (EnPassant % 8)];
+                }
             } else {
+                if (EnPassant < 64) {
+                    Zobrist ^= zobristKeys[BitHelpers.ZobristEnPassantStartingIndex + (EnPassant % 8)];
+                }
                 EnPassant = 255;
             }
             if (PieceType.IsKing(type)) {
                 if (PieceType.IsWhite(type)) {
-                    CastlingRights &= 0b0011;
+                    if ((CastlingRights & 0b1000) != 0) {
+                        CastlingRights &= 0b0111;
+                        Zobrist ^= zobristKeys[BitHelpers.ZobristWhiteKingSideCastlingIndex];
+                    }
+                    if ((CastlingRights & 0b0100) != 0) {
+                        CastlingRights &= 0b1011;
+                        Zobrist ^= zobristKeys[BitHelpers.ZobristWhiteQueenSideCastlingIndex];
+                    }
                     WhiteKingPos = to;
                 } else if (!PieceType.IsWhite(type)) {
-                    CastlingRights &= 0b1100;
+                    if ((CastlingRights & 0b0010) != 0) {
+                        CastlingRights &= 0b1101;
+                        Zobrist ^= zobristKeys[BitHelpers.ZobristBlackKingSideCastlingIndex];
+                    }
+                    if ((CastlingRights & 0b0001) != 0) {
+                        CastlingRights &= 0b1110;
+                        Zobrist ^= zobristKeys[BitHelpers.ZobristBlackQueenSideCastlingIndex];
+                    }
                     BlackKingPos = to;
                 }
                 if (to-from == 2) {
                     MakeMove(PieceType.RookOfColor(PieceType.IsWhite(type)), (int) (to+1), (int) (to-1));
+                    Zobrist ^= zobristKeys[BitHelpers.ZobristWhiteMoveIndex];
                     WhiteTurn = !WhiteTurn;
                 } else if (from-to == 2) {
                     MakeMove(PieceType.RookOfColor(PieceType.IsWhite(type)), (int) (to-2), (int) (to+1));
+                    Zobrist ^= zobristKeys[BitHelpers.ZobristWhiteMoveIndex];
                     WhiteTurn = !WhiteTurn;
                 }
             }
             if (PieceType.IsRook(type)) {
                 if (PieceType.IsWhite(type) && from%8 == 0) {
-                    CastlingRights &= 0b0111;
+                    if ((CastlingRights & 0b1000) != 0) {
+                        CastlingRights &= 0b0111;
+                        Zobrist ^= zobristKeys[BitHelpers.ZobristWhiteKingSideCastlingIndex];
+                    }
                 } else if (PieceType.IsWhite(type) && from%8 == 7) {
-                    CastlingRights &= 0b1011;
+                    if ((CastlingRights & 0b0100) != 0) {
+                        CastlingRights &= 0b1011;
+                        Zobrist ^= zobristKeys[BitHelpers.ZobristWhiteQueenSideCastlingIndex];
+                    }
                 } else if (!PieceType.IsWhite(type) && from%8 == 0) {
-                    CastlingRights &= 0b1101;
+                    if ((CastlingRights & 0b0010) != 0) {
+                        CastlingRights &= 0b1101;
+                        Zobrist ^= zobristKeys[BitHelpers.ZobristBlackKingSideCastlingIndex];
+                    }
                 } else if (!PieceType.IsWhite(type) && from%8 == 7) {
-                    CastlingRights &= 0b1110;
+                    if ((CastlingRights & 0b0001) != 0) {
+                        CastlingRights &= 0b1110;
+                        Zobrist ^= zobristKeys[BitHelpers.ZobristBlackQueenSideCastlingIndex];
+                    }
                 }
             }
             WhiteTurn = !WhiteTurn;
+            Zobrist ^= zobristKeys[BitHelpers.ZobristWhiteMoveIndex];
         }
 
         public bool TryMakeMove(int type, int from, int to) {
@@ -168,6 +213,7 @@ namespace ConsoleChess {
             BitBoard[type] = BitBoard[type] & (~boardPos);
             for (int i = PiecePositions.Length-1; i >= 0; i--) {
                 if (PiecePositions[i].pos == position && PiecePositions[i].type == type) {
+                    Zobrist ^= zobristKeys[PieceType.GetPieceZobristStartingIndex(type)+position];
                     PiecePositions[i].type = PieceType.Empty;
                     break;
                 }
@@ -411,6 +457,39 @@ namespace ConsoleChess {
             }
         }
 
+        private void InitialiseZobristHash() {
+            for (int i = 0; i < ZobristSize; i++) {
+                zobristKeys[i] = BitHelpers.GetPseudoRandomNumber();
+            }
+            for (int pieceType = 0; pieceType < 12; pieceType++) {
+                UInt64 pieceBitboard = BitBoard[pieceType];
+                while (pieceBitboard != 0) {
+                    int squareIndex = BitHelpers.GetLeastSignificant1BitIndex2(pieceBitboard);
+                    Zobrist ^= zobristKeys[(pieceType * 64) + squareIndex];
+                    pieceBitboard &= pieceBitboard - 1;
+                }
+            }
+            if (WhiteTurn) {
+                Zobrist ^= zobristKeys[BitHelpers.ZobristWhiteMoveIndex];
+            }
+            if ((CastlingRights & 0b1000) != 0) {
+                Zobrist ^= zobristKeys[BitHelpers.ZobristWhiteKingSideCastlingIndex];
+            }
+            if ((CastlingRights & 0b0100) != 0) {
+                Zobrist ^= zobristKeys[BitHelpers.ZobristWhiteQueenSideCastlingIndex];
+            }
+            if ((CastlingRights & 0b0010) != 0) {
+                Zobrist ^= zobristKeys[BitHelpers.ZobristBlackKingSideCastlingIndex];
+            }
+            if ((CastlingRights & 0b0001) != 0) {
+                Zobrist ^= zobristKeys[BitHelpers.ZobristBlackQueenSideCastlingIndex];
+            }
+            if (EnPassant < 64) {
+                int file = EnPassant % 8;
+                Zobrist ^= zobristKeys[BitHelpers.ZobristEnPassantStartingIndex + file];
+            }
+        }
+
         public static int Position2DTo1D(int x, int y) {
             return (int) (x+y*8);
         }
@@ -587,6 +666,7 @@ namespace ConsoleChess {
                 }
             }
             board.PiecePositions = piecePositions.ToArray();
+            board.InitialiseZobristHash();
             return board;
         }
     }
