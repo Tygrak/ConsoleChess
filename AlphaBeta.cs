@@ -2,9 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 
 namespace ConsoleChess {
     public class AlphaBeta {
+        const float PositiveInfinity = 100000000;
+        const float NegativeInfinity = -100000000;
+
         Stopwatch stopwatch = new Stopwatch();
         Stopwatch copying = new Stopwatch();
         Stopwatch findingMoves = new Stopwatch();
@@ -13,8 +17,8 @@ namespace ConsoleChess {
 
         Evaluation evaluation = new Evaluation();
 
-        public List<(byte, byte, byte, float)> FindMoveAlphaBeta(Board board, int depth) {
-            List<(byte, byte, byte, float)> result = new List<(byte, byte, byte, float)>();
+        public List<(int, int, int, float)> FindMoveAlphaBeta(Board board, int depth) {
+            List<(int, int, int, float)> result = new List<(int, int, int, float)>();
             var moves = board.GetRealMoves();
             stopwatch.Reset();
             copying.Reset();
@@ -22,17 +26,17 @@ namespace ConsoleChess {
             rating.Reset();
             moving.Reset();
             stopwatch.Start();
-            Parallel.ForEach(moves, move => {
+            /*Parallel.ForEach(moves, move => {
                 Board clone = new Board(board);
                 clone.MakeMove(move.Item1, move.Item2, move.Item3);
-                result.Add((move.Item1, move.Item2, move.Item3, EvaluateAlphaBeta(clone, depth, float.NegativeInfinity, float.PositiveInfinity, !board.WhiteTurn)));
-            });
-            /*foreach (var move in moves) {
+                result.Add((move.Item1, move.Item2, move.Item3, EvaluateAlphaBeta(clone, depth, NegativeInfinity, PositiveInfinity, !board.WhiteTurn)));
+            });*/
+            foreach (var move in moves) {
                 Board clone = new Board(board);
                 clone.MakeMove(move.Item1, move.Item2, move.Item3);
                 result.Add((move.Item1, move.Item2, move.Item3, 
-                            EvaluateAlphaBeta(clone, depth, float.NegativeInfinity, float.PositiveInfinity, !board.WhiteTurn)));
-            }*/
+                            EvaluateAlphaBeta(clone, depth, NegativeInfinity, PositiveInfinity, !board.WhiteTurn)));
+            }
             if (board.WhiteTurn) {
                 result.Sort((a, b) => b.Item4.CompareTo(a.Item4));
             } else {
@@ -67,7 +71,7 @@ namespace ConsoleChess {
             float value = 0;
             Board clone = new Board(board);
             if (maximizingPlayer) {
-                value = float.NegativeInfinity;
+                value = NegativeInfinity;
                 foreach (var move in moves) {
                     moving.Start();
                     bool isMoveLegal = board.TryMakeMove(move.Item1, move.Item2, move.Item3);
@@ -89,7 +93,7 @@ namespace ConsoleChess {
                     }
                 }
             } else {
-                value = float.PositiveInfinity;
+                value = PositiveInfinity;
                 foreach (var move in moves) {
                     moving.Start();
                     bool isMoveLegal = board.TryMakeMove(move.Item1, move.Item2, move.Item3);

@@ -2,6 +2,7 @@
 
 namespace ConsoleChess {
     class Program {
+        //viezha
         //lots of stuff modified from https://www.chessprogramming.org/ and https://github.com/bytefire/Shutranj/blob/master/Shutranj.Engine
         static void Main(string[] args) {
             Game testGame = new Game();

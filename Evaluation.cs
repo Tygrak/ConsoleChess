@@ -78,6 +78,9 @@ namespace ConsoleChess {
             int whitePiecesAmount = BitHelpers.GetNumberOfSetBits(whitePieces);
             int blackPiecesAmount = BitHelpers.GetNumberOfSetBits(blackPieces);
             foreach (var piece in board.PiecePositions) {
+                if (piece.type == PieceType.Empty) {
+                    continue;
+                }
                 float value = 1;
                 (int x, int y) pos = Board.Position1DTo2D(piece.pos);
                 if (PieceType.IsPawn(piece.type)) {

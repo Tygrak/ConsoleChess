@@ -12,10 +12,13 @@ namespace ConsoleChess {
         public const int West = 6;
         public const int NorthWest = 7;
 
-        //public readonly static byte[][][] OrderedPositionRays;
+        //public readonly static int[][][] OrderedPositionRays;
         public readonly static UInt64[][] PositionRays;
         public readonly static UInt64[] Ranks;
         public readonly static UInt64[] Files;
+        public readonly static UInt64[][] PawnMoves;
+        public readonly static UInt64[][] PawnDoubleMoves;
+        public readonly static UInt64[][] PawnAttacks;
         public readonly static UInt64[] KnightMoves;
         public readonly static UInt64[] KingMoves;
         public readonly static UInt64[][] KingShield;
@@ -25,6 +28,9 @@ namespace ConsoleChess {
             PositionRays = CalculateAllPositionRays();
             Ranks = CalculateRanks();
             Files = CalculateFiles();
+            PawnMoves = CalculatePawnMoves();
+            PawnDoubleMoves = CalculatePawnDoubleMoves();
+            PawnAttacks = CalculatePawnAttacks();
             KnightMoves = CalculateKnightMoves();
             KingMoves = CalculateKingMoves();
             KingShield = CalculateKingShield();
@@ -55,6 +61,54 @@ namespace ConsoleChess {
             files[6] = files[0] << 6;
             files[7] = files[0] << 7;
             return files;
+        }
+
+        private static UInt64[][] CalculatePawnMoves() {
+            UInt64[][] pawnMoves = new UInt64[64][];
+            for (int i = 0; i < 64; i++) {
+                pawnMoves[i] = new UInt64[2];
+                pawnMoves[i][0] = 1ul << (i-8);
+                pawnMoves[i][1] = 1ul << (i+8);
+            }
+            return pawnMoves;
+        }
+
+        private static UInt64[][] CalculatePawnAttacks() {
+            UInt64[][] pawnAttacks = new UInt64[64][];
+            for (int i = 0; i < 64; i++) {
+                int y = i/8;
+                pawnAttacks[i] = new UInt64[2];
+                if (y < 7) {
+                    pawnAttacks[i][1] = ((1ul << (i+7)) | (1ul << (i+9))) & Ranks[y+1];
+                } else {
+                    pawnAttacks[i][1] = 0;
+                }
+                if (y > 0) {
+                    pawnAttacks[i][0] = ((1ul << (i-7)) | (1ul << (i-9))) & Ranks[y-1];
+                } else {
+                    pawnAttacks[i][0] = 0;
+                }
+            }
+            return pawnAttacks;
+        }
+
+        private static UInt64[][] CalculatePawnDoubleMoves() {
+            UInt64[][] pawnMoves = new UInt64[64][];
+            for (int i = 0; i < 64; i++) {
+                int y = i/8;
+                pawnMoves[i] = new UInt64[2];
+                if (y == 1) {
+                    pawnMoves[i][0] = 0;
+                    pawnMoves[i][1] = 1ul << (i+16);
+                } else if (y == 6) {
+                    pawnMoves[i][0] = 1ul << (i-16);
+                    pawnMoves[i][1] = 0;
+                } else {
+                    pawnMoves[i][0] = 0;
+                    pawnMoves[i][1] = 0;
+                }
+            }
+            return pawnMoves;
         }
 
         private static UInt64[] CalculateKnightMoves() {
@@ -173,19 +227,19 @@ namespace ConsoleChess {
             UInt64[][] result = new UInt64[64][];
             for (int i = 0; i < 64; i++) {
                 result[i] = new UInt64[8];
-                result[i][North] = CalculateNorthRay((byte) i);
-                result[i][NorthEast] = CalculateNorthEastRay((byte) i);
-                result[i][East] = CalculateEastRay((byte) i);
-                result[i][SouthEast] = CalculateSouthEastRay((byte) i);
-                result[i][South] = CalculateSouthRay((byte) i);
-                result[i][SouthWest] = CalculateSouthWestRay((byte) i);
-                result[i][West] = CalculateWestRay((byte) i);
-                result[i][NorthWest] = CalculateNorthWestRay((byte) i);
+                result[i][North] = CalculateNorthRay((int) i);
+                result[i][NorthEast] = CalculateNorthEastRay((int) i);
+                result[i][East] = CalculateEastRay((int) i);
+                result[i][SouthEast] = CalculateSouthEastRay((int) i);
+                result[i][South] = CalculateSouthRay((int) i);
+                result[i][SouthWest] = CalculateSouthWestRay((int) i);
+                result[i][West] = CalculateWestRay((int) i);
+                result[i][NorthWest] = CalculateNorthWestRay((int) i);
             }
             return result;
         }
 
-        private static UInt64 CalculateNorthRay(byte pos) {
+        private static UInt64 CalculateNorthRay(int pos) {
             int currPos = pos;
             UInt64 result = 0;
             currPos += 8;
@@ -196,7 +250,7 @@ namespace ConsoleChess {
             return result;
         }
 
-        private static UInt64 CalculateNorthEastRay(byte pos) {
+        private static UInt64 CalculateNorthEastRay(int pos) {
             int currPos = pos;
             int currX = pos%8;
             UInt64 result = 0;
@@ -210,7 +264,7 @@ namespace ConsoleChess {
             return result;
         }
 
-        private static UInt64 CalculateEastRay(byte pos) {
+        private static UInt64 CalculateEastRay(int pos) {
             int currPos = pos;
             int currX = pos%8;
             UInt64 result = 0;
@@ -224,7 +278,7 @@ namespace ConsoleChess {
             return result;
         }
 
-        private static UInt64 CalculateSouthEastRay(byte pos) {
+        private static UInt64 CalculateSouthEastRay(int pos) {
             int currPos = pos;
             int currX = pos%8;
             UInt64 result = 0;
@@ -238,7 +292,7 @@ namespace ConsoleChess {
             return result;
         }
 
-        private static UInt64 CalculateSouthRay(byte pos) {
+        private static UInt64 CalculateSouthRay(int pos) {
             int currPos = pos;
             UInt64 result = 0;
             currPos -= 8;
@@ -249,7 +303,7 @@ namespace ConsoleChess {
             return result;
         }
 
-        private static UInt64 CalculateSouthWestRay(byte pos) {
+        private static UInt64 CalculateSouthWestRay(int pos) {
             int currPos = pos;
             int currX = pos%8;
             UInt64 result = 0;
@@ -263,7 +317,7 @@ namespace ConsoleChess {
             return result;
         }
 
-        private static UInt64 CalculateWestRay(byte pos) {
+        private static UInt64 CalculateWestRay(int pos) {
             int currPos = pos;
             int currX = pos%8;
             UInt64 result = 0;
@@ -277,7 +331,7 @@ namespace ConsoleChess {
             return result;
         }
 
-        private static UInt64 CalculateNorthWestRay(byte pos) {
+        private static UInt64 CalculateNorthWestRay(int pos) {
             int currPos = pos;
             int currX = pos%8;
             UInt64 result = 0;

@@ -5,14 +5,18 @@ using System.Diagnostics;
 
 namespace ConsoleChess {
     public class Board {
-        internal UInt64[] BitBoard = new UInt64[12];
-        internal UInt16 CastlingRights = 0b1111;
-        internal byte EnPassant = 255;
-        internal int HalfMovesSincePawnOrCapture = 0;
-        internal bool WhiteTurn = true;
-        internal List<(byte type, byte pos)> PiecePositions = new List<(byte type, byte pos)>(); 
-        internal byte BlackKingPos;
-        internal byte WhiteKingPos;
+        public UInt64[] BitBoard = new UInt64[12];
+        public UInt16 CastlingRights = 0b1111;
+        public int EnPassant = 255;
+        public int HalfMovesSincePawnOrCapture = 0;
+        public bool WhiteTurn = true;
+        public (int type, int pos)[] PiecePositions; 
+        internal int BlackKingPos;
+        internal int WhiteKingPos;
+        
+        public UInt64 Zobrist = 0;
+
+        internal const int MaxMoves = 220;
 
         internal UInt64 WhitePieces {
             get {
@@ -45,7 +49,8 @@ namespace ConsoleChess {
             WhiteTurn = board.WhiteTurn;
             WhiteKingPos = board.WhiteKingPos;
             BlackKingPos = board.BlackKingPos;
-            PiecePositions = new List<(byte type, byte pos)>(board.PiecePositions);
+            Zobrist = board.Zobrist;
+            PiecePositions = ((int type, int pos)[]) board.PiecePositions.Clone();
         }
 
         public void SetStateTo(Board state) {
@@ -56,27 +61,34 @@ namespace ConsoleChess {
             EnPassant = state.EnPassant;
             HalfMovesSincePawnOrCapture = state.HalfMovesSincePawnOrCapture;
             WhiteTurn = state.WhiteTurn;
-            //PiecePositions = new List<(byte type, byte pos)>(state.PiecePositions.Count);
-            PiecePositions = new List<(byte type, byte pos)>(state.PiecePositions);
+            //PiecePositions = new List<(int type, int pos)>(state.PiecePositions.Count);
+            //PiecePositions = new List<(int type, int pos)>(state.PiecePositions);
+            for (int i = 0; i < state.PiecePositions.Length; i++) {
+                PiecePositions[i] = state.PiecePositions[i];
+            }
             WhiteKingPos = state.WhiteKingPos;
             BlackKingPos = state.BlackKingPos;
+            Zobrist = state.Zobrist;
             /*for (int i = 0; i < state.PiecePositions.Count; i++) {
                 PiecePositions.Add((state.PiecePositions[i].type, state.PiecePositions[i].pos));
             }*/
         }
 
-        public void MakeMove(byte type, byte from, byte to) {
+        public void MakeMove(int type, int from, int to) {
             HalfMovesSincePawnOrCapture++;
             UInt64 fromPos = 1ul << from;
             UInt64 toPos = 1ul << to;
             BitBoard[type] = (fromPos | toPos) ^ BitBoard[type];
-            for (int i = PiecePositions.Count-1; i >= 0; i--) {
+            for (int i = PiecePositions.Length-1; i >= 0; i--) {
+                if (PiecePositions[i].type == PieceType.Empty) {
+                    continue;
+                }
                 if (PiecePositions[i].pos == from) {
                     PiecePositions[i] = (PiecePositions[i].type, to);
                 }
                 if (PiecePositions[i].pos == to && PieceType.IsWhite(PiecePositions[i].type) != PieceType.IsWhite(type)) {
                     BitBoard[PiecePositions[i].type] = BitBoard[PiecePositions[i].type] & (~toPos);
-                    PiecePositions.RemoveAt(i);
+                    PiecePositions[i].type = PieceType.Empty;
                     HalfMovesSincePawnOrCapture = 0;
                 }
             }
@@ -85,26 +97,26 @@ namespace ConsoleChess {
                 HalfMovesSincePawnOrCapture = 0;
                 if (PieceType.IsWhite(type)) {
                     if (to-from == 16) {
-                        EnPassant = (byte) (from+8);
+                        EnPassant = (int) (from+8);
                     } else if (to == EnPassant) {
-                        ClearPieceFromSquare(PieceType.BlackPawn, (byte) (to-8));
+                        ClearPieceFromSquare(PieceType.BlackPawn, (int) (to-8));
                     }
                     if (yPos == 7) {
                         BitBoard[type] &= (~toPos);
                         BitBoard[PieceType.WhiteQueen] |= toPos;
-                        int index = PiecePositions.FindIndex(p => p.pos == to && p.type == type);
+                        int index = Array.FindIndex(PiecePositions, p => p.pos == to && p.type == type);
                         PiecePositions[index] = (PieceType.WhiteQueen, to);
                     }
                 } else if (!PieceType.IsWhite(type)) {
                     if (from-to == 16) {
-                        EnPassant = (byte) (from-8);
+                        EnPassant = (int) (from-8);
                     } else if (to == EnPassant) {
-                        ClearPieceFromSquare(PieceType.WhitePawn, (byte) (to+8));
+                        ClearPieceFromSquare(PieceType.WhitePawn, (int) (to+8));
                     }
                     if (yPos == 0) {
                         BitBoard[type] &= (~toPos);
                         BitBoard[PieceType.BlackQueen] |= toPos;
-                        int index = PiecePositions.FindIndex(p => p.pos == to && p.type == type);
+                        int index = Array.FindIndex(PiecePositions, p => p.pos == to && p.type == type);
                         PiecePositions[index] = (PieceType.BlackQueen, to);
                     }
                 }
@@ -120,10 +132,10 @@ namespace ConsoleChess {
                     BlackKingPos = to;
                 }
                 if (to-from == 2) {
-                    MakeMove(PieceType.RookOfColor(PieceType.IsWhite(type)), (byte) (to+1), (byte) (to-1));
+                    MakeMove(PieceType.RookOfColor(PieceType.IsWhite(type)), (int) (to+1), (int) (to-1));
                     WhiteTurn = !WhiteTurn;
                 } else if (from-to == 2) {
-                    MakeMove(PieceType.RookOfColor(PieceType.IsWhite(type)), (byte) (to-2), (byte) (to+1));
+                    MakeMove(PieceType.RookOfColor(PieceType.IsWhite(type)), (int) (to-2), (int) (to+1));
                     WhiteTurn = !WhiteTurn;
                 }
             }
@@ -141,7 +153,7 @@ namespace ConsoleChess {
             WhiteTurn = !WhiteTurn;
         }
 
-        public bool TryMakeMove(byte type, byte from, byte to) {
+        public bool TryMakeMove(int type, int from, int to) {
             MakeMove(type, from, to);
             if (!WhiteTurn && SquareAttackers(!WhiteTurn, WhiteKingPos) != 0) {
                 return false;
@@ -151,18 +163,18 @@ namespace ConsoleChess {
             return true;
         }
 
-        public void ClearPieceFromSquare(byte type, byte position) {
+        public void ClearPieceFromSquare(int type, int position) {
             UInt64 boardPos = 1ul << position;
             BitBoard[type] = BitBoard[type] & (~boardPos);
-            for (int i = PiecePositions.Count-1; i >= 0; i--) {
+            for (int i = PiecePositions.Length-1; i >= 0; i--) {
                 if (PiecePositions[i].pos == position && PiecePositions[i].type == type) {
-                    PiecePositions.RemoveAt(i);
+                    PiecePositions[i].type = PieceType.Empty;
                     break;
                 }
             }
         }
 
-        public UInt64 SquareAttackers(bool white, byte pos) {
+        public UInt64 SquareAttackers(bool white, int pos) {
             int yPos = pos/8;
             UInt64 boardPos = 1ul << pos;
             UInt64 pawnMoves = 0;
@@ -178,12 +190,12 @@ namespace ConsoleChess {
             return pawnMoves | knightMoves | bishopMoves | rookMoves | kingMoves;
         }
 
-        public GameResult GetGameResultFromMoves(List<(byte, byte, byte)> moves) {
+        public GameResult GetGameResultFromMoves(List<(int, int, int)> moves) {
             if (HalfMovesSincePawnOrCapture >= 50) {
                 return GameResult.Draw;
             }
             if (moves.Count == 0) {
-                var king = PiecePositions.Find(p => p.type == PieceType.KingOfColor(WhiteTurn));
+                var king = Array.Find(PiecePositions, p => p.type == PieceType.KingOfColor(WhiteTurn));
                 if (SquareAttackers(WhiteTurn, king.pos) != 0) {
                     return WhiteTurn ? GameResult.BlackWin : GameResult.WhiteWin;
                 } else {
@@ -193,13 +205,13 @@ namespace ConsoleChess {
             return GameResult.Ongoing;
         }
 
-        public List<(byte, byte, byte)> GetRealMoves() {
+        public List<(int, int, int)> GetRealMoves() {
             var pseudoMoves = EncodePseudoMoves(AvailablePiecePseudoMoves());
             RemoveIllegalMoves(pseudoMoves);
             return pseudoMoves;
         }
 
-        public List<(byte, byte, byte)> GetRealMoves(Stopwatch findPseudo, Stopwatch removeIllegal) {
+        public List<(int, int, int)> GetRealMoves(Stopwatch findPseudo, Stopwatch removeIllegal) {
             findPseudo.Start();
             var pseudoMoves = EncodePseudoMoves(AvailablePiecePseudoMoves());
             findPseudo.Stop();
@@ -209,11 +221,11 @@ namespace ConsoleChess {
             return pseudoMoves;
         }
 
-        public void RemoveIllegalMoves(List<(byte, byte, byte)> pseudoMoves) {
+        public void RemoveIllegalMoves(List<(int, int, int)> pseudoMoves) {
             Board clone = new Board(this);
             for (int i = pseudoMoves.Count-1; i >= 0; i--) {
                 MakeMove(pseudoMoves[i].Item1, pseudoMoves[i].Item2, pseudoMoves[i].Item3);
-                var king = PiecePositions.Find(p => p.type == PieceType.KingOfColor(!WhiteTurn));
+                var king = Array.Find(PiecePositions, p => p.type == PieceType.KingOfColor(!WhiteTurn));
                 if (SquareAttackers(!WhiteTurn, king.pos) != 0) {
                     pseudoMoves.RemoveAt(i);
                 }
@@ -221,17 +233,17 @@ namespace ConsoleChess {
             }
         }
 
-        public List<(byte, byte, byte)> GetPseudoMoves() {
+        public List<(int, int, int)> GetPseudoMoves() {
             return EncodePseudoMoves(AvailablePiecePseudoMoves());
         }
 
-        public List<(byte, byte, byte)> EncodePseudoMoves(List<(byte, byte, UInt64)> pieceMoves) {
-            List<(byte, byte, byte)> result = new List<(byte, byte, byte)>();
+        public List<(int, int, int)> EncodePseudoMoves(List<(int, int, UInt64)> pieceMoves) {
+            List<(int, int, int)> result = new List<(int, int, int)>();
             foreach (var pieceMove in pieceMoves) {
                 if (pieceMove.Item3 == 0) {
                     continue;
                 }
-                for (byte to = 0; to < 64; to++) {
+                for (int to = 0; to < 64; to++) {
                     UInt64 pos = 1ul << to;
                     if ((pieceMove.Item3 & pos) != 0) {
                         result.Add((pieceMove.Item1, pieceMove.Item2, to));
@@ -241,8 +253,8 @@ namespace ConsoleChess {
             return result;
         }
 
-        public List<(byte, byte, UInt64)> AvailablePiecePseudoMoves() {
-            List<(byte, byte, UInt64)> moves = new List<(byte, byte, UInt64)>();
+        public List<(int, int, UInt64)> AvailablePiecePseudoMoves() {
+            List<(int, int, UInt64)> moves = new List<(int, int, UInt64)>();
             //6 bits from, 6 bits to, 4 bits promotion?
             foreach (var piece in PiecePositions) {
                 if (PieceType.IsWhite(piece.type) != WhiteTurn) {
@@ -253,7 +265,7 @@ namespace ConsoleChess {
             return moves;
         }
 
-        public (byte, byte, UInt64) AvailablePiecePseudoMoves((byte, byte) pos) {
+        public (int, int, UInt64) AvailablePiecePseudoMoves((int, int) pos) {
             UInt64 moves = 0;
             bool whitePiece = PieceType.IsWhite(pos.Item1);
             if (PieceType.IsPawn(pos.Item1)) {
@@ -272,30 +284,29 @@ namespace ConsoleChess {
             return (pos.Item1, pos.Item2, moves);
         }
 
-        public UInt64 GetMovesForPawn(bool white, byte pos) {
+        public UInt64 GetMovesForPawn(bool white, int pos) {
             UInt64 piece = 1ul << pos;
             UInt64 push;
             UInt64 attack = 0;
             UInt64 allPieces = AllPieces;
             UInt64 enPassant = 1ul << EnPassant;
-            int yPos = pos/8;
             if (white) {
-                push = (piece << 8) & (~allPieces);
-                if (yPos == 1 && push != 0) {
-                    push = (push | piece << 16) & (~allPieces);
+                push = RayHelpers.PawnMoves[pos][1] & (~allPieces);
+                if (RayHelpers.PawnDoubleMoves[pos][1] != 0 && push != 0) {
+                    push |= RayHelpers.PawnDoubleMoves[pos][1] & (~allPieces);
                 }
-                attack = ((piece << 7) | (piece << 9)) & RayHelpers.Ranks[yPos+1] & (BlackPieces | enPassant);
+                attack = RayHelpers.PawnAttacks[pos][1] & (BlackPieces | enPassant);
             } else {
-                push = (piece >> 8) & (~allPieces);
-                if (yPos == 6 && push != 0) {
-                    push = (push | piece >> 16) & (~allPieces);
+                push = RayHelpers.PawnMoves[pos][0] & (~allPieces);
+                if (RayHelpers.PawnDoubleMoves[pos][0] != 0 && push != 0) {
+                    push |= RayHelpers.PawnDoubleMoves[pos][0] & (~allPieces);
                 }
-                attack = ((piece >> 7) | (piece >> 9)) & RayHelpers.Ranks[yPos-1] & (WhitePieces | enPassant);
+                attack = RayHelpers.PawnAttacks[pos][0] & (WhitePieces | enPassant);
             }
             return push | attack;
         }
 
-        public UInt64 GetMovesForKnight(bool white, byte pos) {
+        public UInt64 GetMovesForKnight(bool white, int pos) {
             UInt64 moves = RayHelpers.KnightMoves[pos];
             if (white) {
                 moves = moves & (~WhitePieces);
@@ -305,7 +316,7 @@ namespace ConsoleChess {
             return moves;
         }
 
-        public UInt64 GetMovesForBishop(bool white, byte pos) {
+        public UInt64 GetMovesForBishop(bool white, int pos) {
             UInt64 moves = 0;
             UInt64 blackPieces = BlackPieces;
             UInt64 whitePieces = WhitePieces;
@@ -322,7 +333,7 @@ namespace ConsoleChess {
             return moves;
         }
 
-        public UInt64 GetMovesForRook(bool white, byte pos) {
+        public UInt64 GetMovesForRook(bool white, int pos) {
             UInt64 moves = 0;
             UInt64 blackPieces = BlackPieces;
             UInt64 whitePieces = WhitePieces;
@@ -339,11 +350,11 @@ namespace ConsoleChess {
             return moves;
         }
 
-        public UInt64 GetMovesForQueen(bool white, byte pos) {
+        public UInt64 GetMovesForQueen(bool white, int pos) {
             return GetMovesForRook(white, pos) | GetMovesForBishop(white, pos);
         }
 
-        public UInt64 GetMovesForKing(bool white, byte pos) {
+        public UInt64 GetMovesForKing(bool white, int pos) {
             UInt64 moves = RayHelpers.KingMoves[pos];
             UInt64 allPieces = AllPieces;
             UInt64 boardPos = 1ul << pos;
@@ -392,7 +403,7 @@ namespace ConsoleChess {
             return attacks;
         }
 
-        internal byte GetKingOfColorPosition(bool white) {
+        internal int GetKingOfColorPosition(bool white) {
             if (white) {
                 return WhiteKingPos;
             } else {
@@ -400,16 +411,16 @@ namespace ConsoleChess {
             }
         }
 
-        public static byte Position2DTo1D(int x, int y) {
-            return (byte) (x+y*8);
+        public static int Position2DTo1D(int x, int y) {
+            return (int) (x+y*8);
         }
 
         public static (int, int) Position1DTo2D(int pos) {
             return (pos%8, pos/8);
         }
 
-        public static byte PositionAlgebraicTo1D(string algebraic) {
-            return (byte) (algebraic[0]-'a'+(algebraic[1]-'1')*8);
+        public static int PositionAlgebraicTo1D(string algebraic) {
+            return (int) (algebraic[0]-'a'+(algebraic[1]-'1')*8);
         }
 
         public static string Position1DToAlgebraic(int pos) {
@@ -519,10 +530,10 @@ namespace ConsoleChess {
                 board.CastlingRights |= 0b0001;
             }
             if (match.Groups[11].Value != "-") {
-                board.EnPassant = (byte) (match.Groups[11].Value[0]-'a'+(match.Groups[11].Value[1]-'1')*8);
+                board.EnPassant = (int) (match.Groups[11].Value[0]-'a'+(match.Groups[11].Value[1]-'1')*8);
             }
             board.HalfMovesSincePawnOrCapture = int.Parse(match.Groups[12].Value);
-            List<(byte type, byte pos)> piecePositions = new List<(byte type, byte pos)>(); 
+            List<(int type, int pos)> piecePositions = new List<(int type, int pos)>(); 
             for (int y = 7; y >= 0; y--) {
                 UInt64 x = 0;
                 string row = match.Groups[8-y].Value;
@@ -531,7 +542,7 @@ namespace ConsoleChess {
                         x += (UInt64) (row[i]-'0');
                         continue;
                     }
-                    byte boardPos = (byte) (x+(ulong) y*8);
+                    int boardPos = (int) (x+(ulong) y*8);
                     UInt64 pos = 1ul << boardPos;
                     if (row[i] == 'p') {
                         board.BitBoard[PieceType.BlackPawn] |= pos;
@@ -575,7 +586,7 @@ namespace ConsoleChess {
                     x++;
                 }
             }
-            board.PiecePositions = piecePositions;
+            board.PiecePositions = piecePositions.ToArray();
             return board;
         }
     }

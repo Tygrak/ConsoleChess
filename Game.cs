@@ -19,9 +19,9 @@ namespace ConsoleChess {
 
         public void StartGame() {
             DrawBoard();
+            Random random = new Random(0);
             while (true) {
                 Console.WriteLine();
-                Random random = new Random();
                 var moves = CurrentBoard.GetRealMoves();
                 GameResult gameResult = CurrentBoard.GetGameResultFromMoves(moves);
                 if (gameResult == GameResult.Draw) {
@@ -64,7 +64,7 @@ namespace ConsoleChess {
                         if (halfTurnCount <= 1) {
                             sortedMoves.Insert(0, (PieceType.WhitePawn, Board.PositionAlgebraicTo1D("e2"), Board.PositionAlgebraicTo1D("e4"), 0));
                             sortedMoves.Insert(0, (PieceType.WhitePawn, Board.PositionAlgebraicTo1D("d2"), Board.PositionAlgebraicTo1D("d4"), 0));
-                            selected = random.Next(Math.Min(sortedMoves.Count, 5));
+                            selected = random.Next(Math.Min(sortedMoves.Count, 6));
                         } else if (halfTurnCount <= 4) {
                             selected = random.Next(Math.Min(sortedMoves.Count, 3));
                         } else if (halfTurnCount <= 8) {
@@ -92,7 +92,7 @@ namespace ConsoleChess {
             Console.WriteLine(CurrentBoard.BoardToFen((halfTurnCount+1)/2));
         }
 
-        public (byte, byte) GetPlayerMove() {
+        public (int, int) GetPlayerMove() {
             Console.Write("Move:");
             string input = "";
             Match match = Regex.Match(input, @"x");
